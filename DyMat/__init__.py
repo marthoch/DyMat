@@ -26,6 +26,7 @@ __author__='Joerg Raedler (joerg@j-raedler.de)'
 __license__='BSD License (http://www.opensource.org/licenses/bsd-license.php)'
 
 import sys, math, numpy, scipy.io
+import pandas as pd
 
 # extract strings from the matrix
 strMatNormal = lambda a: [''.join(s).rstrip() for s in a]
@@ -138,8 +139,30 @@ class DyMatFile:
             dd = dd * -1
         return dd
 
+    def data_pd(self, varName):
+        """Return the values of the variable as pandas Series.
+
+        :Arguments:
+            - varName: string
+        :Returns:
+            - pandas.Series with the values"""
+        time = self.abscissa(varName)
+        values = self.data(varName)
+        ps = pd.Series(data=values, index=time[0], name=varName)
+        ps.index.name = time[1]
+        return ps
+
     # add a dictionary-like interface
-    __getitem__ = data
+    __getitem__ = data_pd   # data or data_pd?
+
+    def get_simulation_data(self):
+        dd = dict()
+        samplesN = self.mat['data_2'].shape[1]
+        for k in self.names():
+            if self.data(k).shape[0] == samplesN:
+                dd[k] = self.data_pd(k)
+        return pd.DataFrame.from_dict(dd)
+
 
     def block(self, varName):
         """Returns the block number of the variable.
