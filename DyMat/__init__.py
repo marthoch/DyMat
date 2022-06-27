@@ -125,6 +125,12 @@ class DyMatFile:
         else:
             return [k for (k,v) in self._vars.items() if v[1] == block]
 
+    def is_simulation_variable(self, varName):
+        return self._vars[varName][1] == 2
+
+    def is_parameter(self, varName):
+        return self._vars[varName][1] == 1
+
     def data(self, varName):
         """Return the values of the variable.
 
@@ -157,9 +163,8 @@ class DyMatFile:
 
     def get_simulation_data(self):
         dd = dict()
-        samplesN = self.mat['data_2'].shape[1]
         for k in self.names():
-            if self.data(k).shape[0] == samplesN:
+            if self.is_simulation_variable(k):
                 dd[k] = self.data_pd(k)
         return pd.DataFrame.from_dict(dd)
 
@@ -250,26 +255,51 @@ class DyMatFile:
                 vDict[bl] = l
         return vDict
 
-    def nameTree(self):
+    def nameTree(self, type=None, der_style='suffix'):
         """Return a tree of all variable names with respect to the path names. Path 
         elements are separated by dots. The tree will represent the structure of the 
         Modelica models. The tree is returned as a dictionary of dictionaries. The keys 
         are the path elements, values are sub-dictionaries or variable names.
 
         :Arguments:
-            - None
+            - type:
+                'simulation' .. only simulation variables
+                'parameter'  .. only parameter
+                None or 'all' .. all
+            - der_style : derivation style
+                'function'  .. show as function
+                'suffix'  .. show as suffix
         :Returns:
             - dictionary
         """
         root = {}
+        if type not in ['simulation', 'parameter', 'all', None]:
+            raise Exception(f"Unknown type '{type}': use ['simulation', 'parameter', 'all', None]")
+        only_simulation = type == 'simulation'
+        only_parameter = type == 'parameter'
         for v in self._vars.keys():
+            if only_simulation and not self.is_simulation_variable(v):
+                continue
+            elif only_parameter and not self.is_parameter(v):
+                continue
             branch = root
+            der = 0
+            v0 = v
+            while v.startswith('der('):
+                der += 1
+                v = v[4:-1]
             elem = v.split('.')
+            if der_style == 'suffix':
+                elem[-1] = elem[-1] + '::der' * der
+            elif der_style == 'function':
+                elem[-1] = 'der(' * der + elem[-1] + ')' * der
+            else:
+                raise Exception('der_style not implemented')
             for e in elem[:-1]:
                 if not e in branch:
                     branch[e] = {}
                 branch = branch[e]
-            branch[elem[-1]] = v
+            branch[elem[-1]] = v0
         return root
 
     def getVarArray(self, varNames, withAbscissa=True):
