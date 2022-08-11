@@ -21,12 +21,14 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-__version__='0.7'
-__author__='Joerg Raedler (joerg@j-raedler.de)'
+__version__='0.7***'
+__author__='Joerg Raedler (joerg@j-raedler.de), ***'
 __license__='BSD License (http://www.opensource.org/licenses/bsd-license.php)'
 
-import sys, math, numpy, scipy.io
+import sys, os, datetime, math, numpy, scipy.io
 import pandas as pd
+import logging
+logger = logging.getLogger(__name__)
 
 # extract strings from the matrix
 strMatNormal = lambda a: [''.join(s).rstrip() for s in a]
@@ -42,6 +44,13 @@ class DyMatFile:
     def __init__(self, fileName):
         """Open the file fileName and parse contents"""
         self.fileName = fileName
+
+        logger.info(f"""DyMat opening file
+file name:              "{self.fileName}"
+file modification time: {datetime.datetime.fromtimestamp(os.path.getmtime(self.fileName)).isoformat()}"""
+        )
+
+
         self.mat = scipy.io.loadmat(fileName, chars_as_strings=False)
         self._vars = {}
         self._blocks = []
