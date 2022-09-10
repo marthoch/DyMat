@@ -41,13 +41,18 @@ sign = lambda x: math.copysign(1.0, x)
 class DyMatFile:
     """A result file written by Dymola or OpenModelica"""
 
-    def __init__(self, fileName):
+    def __init__(self, fileName=None, OMEditModelName=None):
         """Open the file fileName and parse contents"""
+        if OMEditModelName:
+            if fileName is None:
+                fileName = _OMEdit_resultfilename(OMEditModelName)
+            else:
+                raise Exception('Value for fileName and OMEditModelName provided. They are exclusive to use.')
         self.fileName = fileName
 
         logger.info(f"""DyMat opening file
 file name:              "{self.fileName}"
-file modification time: {datetime.datetime.fromtimestamp(os.path.getmtime(self.fileName)).isoformat()}"""
+file modification time: {datetime.datetime.fromtimestamp(os.path.getmtime(self.fileName)).isoformat()}   file age: {datetime.datetime.now() - datetime.datetime.fromtimestamp(os.path.getmtime(self.fileName))}"""
         )
 
 
@@ -347,3 +352,47 @@ file modification time: {datetime.datetime.fromtimestamp(os.path.getmtime(self.f
 # for compatibility with old versions
 DymolaMat = DyMatFile
 
+
+def _OMEdit_path():
+    """Path to the temporary model files used by OMEdit"""
+    lappdatapath = os.environ.get('LOCALAPPDATA')
+    if lappdatapath:
+        omeditpath = os.path.join(lappdatapath, 'Temp', 'OpenModelica', 'OMEdit')
+    else:
+        raise NotImplemented('%LOCALAPPDATA% not found, not on Windows?')
+    return omeditpath
+
+def _OMEdit_resultfilename(modelname):
+    fn = os.path.join(_OMEdit_path(), modelname, modelname+'_res.mat')
+    if not os.path.exists(fn):
+        raise FileExistsError(f'{fn} does not exit')
+    return fn
+
+def OMEdit_list_models(verbose=True):
+    """list OMEdit models with .mat result files in the standard directory
+    order: chronologically last first
+    """
+    models_dirs = []
+    res_mtime = []
+    with os.scandir(_OMEdit_path()) as dentries:
+        for dentry in dentries:
+            if not dentry.is_dir():
+                continue
+            modelname = dentry.name
+            try:
+                resfilename = _OMEdit_resultfilename(modelname)
+            except FileExistsError:
+                continue # maybe a model, but no mat result file
+            models_dirs.append(dentry)
+            res_mtime.append(dentry.stat().st_mtime)
+    o = numpy.argsort(numpy.array(res_mtime))[::-1]
+    models = []
+    for i in o:
+        dentry = models_dirs[i]
+        models.append(dentry.name)
+        if verbose:
+            age = datetime.datetime.now() - datetime.datetime.fromtimestamp(dentry.stat().st_mtime)
+            print(f'{dentry.name:20}   age: {age}')
+    return models
+
+#eof
