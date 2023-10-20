@@ -113,7 +113,14 @@ file modification time: {datetime.datetime.fromtimestamp(os.path.getmtime(self.f
                 self._vars[names[i]] = ('', 0, i, 1)
         else:
             raise Exception('File structure not supported!')
-    
+
+
+    def __str__(self):
+        ret = """DyMatFile(fileName=r'{s.fileName}')""".format(s=self)
+        return ret
+
+    __repr__ = __str__
+
             
     def blocks(self):
         """Returns the numbers of all data blocks.
