@@ -43,16 +43,20 @@ class DyMatFile:
 
     def __init__(self, fileName=None, OMEditModelName=None):
         """Open the file fileName and parse contents"""
+        self.OMEditModelName = None
         if OMEditModelName:
+            self.OMEditModelName = OMEditModelName
             if fileName is None:
                 fileName = _OMEdit_resultfilename(OMEditModelName)
             else:
                 raise Exception('Value for fileName and OMEditModelName provided. They are exclusive to use.')
         self.fileName = fileName
 
+        self.resultfile_modification_time = datetime.datetime.fromtimestamp(os.path.getmtime(self.fileName))
+
         logger.info(f"""DyMat opening file
 file name:              "{self.fileName}"
-file modification time: {datetime.datetime.fromtimestamp(os.path.getmtime(self.fileName)).isoformat()}   file age: {datetime.datetime.now() - datetime.datetime.fromtimestamp(os.path.getmtime(self.fileName))}"""
+file modification time: {self.resultfile_modification_time.isoformat()}   file age: {datetime.datetime.now() - self.resultfile_modification_time}"""
         )
 
 
@@ -61,6 +65,7 @@ file modification time: {datetime.datetime.fromtimestamp(os.path.getmtime(self.f
         self._blocks = []
         try:
             fileInfo = strMatNormal(self.mat['Aclass'])
+            self.fileInfo = fileInfo
         except KeyError:
             raise Exception('File structure not supported!')
         if fileInfo[1] == '1.1':
@@ -116,7 +121,12 @@ file modification time: {datetime.datetime.fromtimestamp(os.path.getmtime(self.f
 
 
     def __str__(self):
-        ret = """DyMatFile(fileName=r'{s.fileName}')""".format(s=self)
+        ret = f"""DyMatFile(fileName=r'{self.fileName}')
+model name:             {self.OMEditModelName}
+file modification time: {self.resultfile_modification_time.isoformat()}   
+file age:               {datetime.datetime.now() - self.resultfile_modification_time}
+file info:              {self.fileInfo}
+"""
         return ret
 
     __repr__ = __str__
