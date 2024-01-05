@@ -121,7 +121,7 @@ file modification time: {datetime.datetime.fromtimestamp(os.path.getmtime(self.f
 
     __repr__ = __str__
 
-            
+
     def blocks(self):
         """Returns the numbers of all data blocks.
 
@@ -370,7 +370,11 @@ def _OMEdit_path():
     return omeditpath
 
 def _OMEdit_resultfilename(modelname):
-    fn = os.path.join(_OMEdit_path(), modelname, modelname+'_res.mat')
+    if '.' in modelname:
+        resfn = modelname.split('.')[-1] + '_res.mat'
+    else:
+        resfn = modelname + '_res.mat'
+    fn = os.path.join(_OMEdit_path(), modelname, resfn)
     if not os.path.exists(fn):
         raise FileExistsError(f'{fn} does not exit')
     return fn
